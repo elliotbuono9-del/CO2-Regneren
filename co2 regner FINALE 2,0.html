@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌍 CO₂ Regneren med Badges, Challenges, Graf & Streaks</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f8ff; color:#222; }
+header { background:#4CAF50; color:white; padding:15px; text-align:center; font-size:1.8em; font-weight:bold; }
+#welcome { font-size:1.2em; margin-top:5px; }
+main { padding:20px; max-width:600px; margin:auto; }
+h2,h3 { color:#2e7d32; }
+.input-box { background:#f1f8e9; border-radius:10px; padding:15px; margin-bottom:15px; display:flex; flex-direction:column; gap:10px; }
+.input-box label { font-weight:bold; margin-bottom:5px; }
+input, select { padding:8px; border-radius:6px; border:1px solid #ccc; width:100%; }
+button { background:#4CAF50; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-size:1em; margin-top:10px; }
+button:hover { background:#45a049; }
+#resultat, #topTips { margin-top:20px; padding:15px; background:#e8f5e9; border-radius:10px; white-space:pre-line; }
+#factBox { margin-top:30px; background:#f0f8ff; padding:20px; border-radius:10px; font-size:1em; box-shadow:0 0 10px rgba(0,0,0,0.2); }
+#factBox h3 { margin-top:0; color:#2e7d32; }
+#xpBarContainer { position:fixed; bottom:10px; left:10px; background:#c8e6c9; border-radius:20px; padding:5px; width:220px; box-shadow:0 0 5px rgba(0,0,0,0.2); }
+#xpBar { height:15px; border-radius:15px; width:0%; transition:width 0.5s, background 0.5s; background:linear-gradient(90deg,#81c784,#4CAF50); }
+#xpText { text-align:center; font-size:0.9em; }
+#streakText { text-align:center; font-size:0.9em; margin-top:3px; color:#ff9800; font-weight:bold; }
+#levelUp { display:none; position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); font-size:2.5em; background:rgba(255,255,255,0.95); color:#4CAF50; padding:30px 50px; border-radius:15px; text-align:center; box-shadow:0 0 30px rgba(76,175,80,0.6); z-index:2000; }
+#loginSection { margin-bottom:20px; }
+#factPopup { display:none; position:fixed; bottom:20px; right:20px; width:300px; background:#fff9c4; padding:15px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.3); z-index:2000; }
+#factPopup button { margin-top:10px; background:#4CAF50; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; }
+.confetti-piece { position:fixed; width:8px; height:8px; background:red; opacity:0.7; z-index:3000; pointer-events:none; animation:fall 3s linear forwards; }
+@keyframes fall { 0% { transform:translateY(0) rotate(0deg);} 100% { transform:translateY(100vh) rotate(720deg); opacity:0;} }
+.badges { display:flex; gap:5px; margin-top:10px; flex-wrap:wrap; }
+.badge { padding:5px 8px; background:#ffeb3b; border-radius:5px; font-weight:bold; }
+#challenges { margin-top:20px; background:#e0f7fa; padding:15px; border-radius:10px; }
+.challenge { padding:10px; margin-bottom:5px; border-radius:5px; background:#b2ebf2; display:flex; justify-content:space-between; align-items:center; }
+.challenge button { padding:5px 10px; font-size:0.9em; }
+#co2Chart { margin-top:15px; background:#fff; padding:10px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+<header>
+  🌿 CO₂ Regneren
+  <div id="welcome"></div>
+</header>
+<main>
+<div id="loginSection">
+<h2>🔐 Log ind / Opret bruger</h2>
+<input type="text" id="username" placeholder="Brugernavn">
+<input type="password" id="pin" placeholder="4-cifret kode">
+<button id="loginBtn">Log ind / Opret</button>
+</div>
+
+<div id="mainContent" style="display:none;">
+<h2>📝 Udfyld dit forbrug</h2>
+<div class="input-box">
+  <div>
+    <label>Transportmiddel 🚲🚗🚌✈️</label>
+    <select id="biltype">
+      <option value="ingen">Ingen bil 🚶‍♂️</option>
+      <option value="benzin">Benzinbil 🚗</option>
+      <option value="diesel">Dieselbil 🚙</option>
+      <option value="elbil">Elbil ⚡🚘</option>
+      <option value="bus">Bus 🚌</option>
+      <option value="tog">Tog 🚆</option>
+      <option value="cykel">Cykel 🚴‍♂️</option>
+    </select>
+  </div>
+  <div><label>Kilometer kørt pr år 🚙</label><input type="number" id="km" placeholder="12000"></div>
+  <div><label>Elforbrug (kWh/år) 💡</label><input type="number" id="elforbrug" placeholder="3000"></div>
+  <div><label>Varmeforbrug (kWh/år) 🔥</label><input type="number" id="varmeforbrug" placeholder="10000"></div>
+  <div><label>Kød måltider pr uge 🥩</label><input type="number" id="koed" placeholder="5"></div>
+  <div><label>Vegetar måltider pr uge 🥦</label><input type="number" id="veg" placeholder="3"></div>
+  <div><label>Flyrejser pr år ✈️</label><input type="number" id="fly" placeholder="2"></div>
+  <div><label>Affald pr uge (kg) 🗑️</label><input type="number" id="affald" placeholder="10"></div>
+  <div><label>Plastikforbrug pr uge (kg) ♻️</label><input type="number" id="plastik" placeholder="2"></div>
+  <div><label>Madspild pr uge (kg) 🥡</label><input type="number" id="madspild" placeholder="1"></div>
+  <div><label>Tøjforbrug pr måned 👕</label><input type="number" id="toej" placeholder="3"></div>
+</div>
+
+<button id="beregn">🌍 Beregn CO₂</button>
+<div id="resultat"></div>
+<div id="topTips"></div>
+<div class="badges" id="badges"></div>
+<div id="xpBarContainer">
+  <div id="xpBar"></div>
+  <div id="xpText">XP: 0 / 100</div>
+  <div id="streakText">Streak: 0 dage 🔥</div>
+</div>
+
+<div id="challenges">
+<h3>🌟 Daglige CO₂ Challenges <span id="challengeTimer" style="font-size:0.9em; color:#555;"></span></h3>
+<div id="challengeList"></div>
+</div>
+
+<canvas id="co2Chart" width="500" height="250"></canvas>
+
+<div id="factBox">
+<h3>🌎 Fakta om CO₂ og miljø</h3>
+<p>CO₂ er en af de vigtigste drivhusgasser. 🌍 Transport, industri og landbrug er de største kilder. 🚗✈️🏭</p>
+<p>Kødproduktion har stor miljøpåvirkning. 🥩 Mindre kød = mindre CO₂.</p>
+<p>Madspild spilder ressourcer som vand, energi og CO₂. 🥡</p>
+<p>Plastik og tøjproduktion genererer store mængder CO₂. 👕♻️</p>
+<p>Offentlig transport, cykling og gang reducerer CO₂. 🚆🚲🚶‍♂️</p>
+<p>Genbrug, energibesparelse og lokale indkøb hjælper miljøet markant. ♻️🌱</p>
+</div>
+
+<div id="levelUp">🎉 LEVEL UP! 🌟</div>
+<div id="factPopup">
+  <span id="factText"></span>
+  <button onclick="closeFact()">Luk</button>
+</div>
+
+<script>
+// --- START JAVASCRIPT ---
+let users={}, currentUser=null, lastCalc=0;
+let allChallenges = [
+  {text:"🚲 Tag cyklen eller gå i stedet for bil", xp:20},
+  {text:"🥦 Spis mindst 2 vegetar måltider", xp:15},
+  {text:"♻️ Genbrug mindst 3 ting", xp:10},
+  {text:"💡 Sluk unødvendige lys og elektronik", xp:10},
+  {text:"🛒 Køb lokalt og spar transport", xp:10},
+  {text:"🌱 Reducer madspild", xp:15}
+];
+let userChallenges = [];
+let rotateInterval = 15*60*1000;
+let nextRotation = Date.now() + rotateInterval;
+let chart=null;
+let chartData = {labels:['Bil','El','Varme','Kød','Veg','Fly','Affald','Plastik','Madspild','Tøj'], datasets:[{label:'CO₂ kg/år', data:[], backgroundColor:['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#FF9F40','#8AC926','#FF595E','#1982C4','#6A4C93']}]};
+
+// LOGIN
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('pin').value.trim();
+  if(!u||p.length!==4){alert("Udfyld brugernavn og 4-cifret kode"); return;}
+  if(users[u]){ if(users[u].pin===p){currentUser=u;} else{alert("Forkert kode!"); return;} }
+  else{ users[u]={pin:p,xp:0,nextXP:100,level:1,badges:[],streak:0,streakTime:null}; currentUser=u; }
+  document.getElementById('welcome').innerText = `Velkommen ${currentUser} til CO₂ Regneren! 🌍`;
+  document.getElementById('loginSection').style.display='none';
+  document.getElementById('mainContent').style.display='block';
+  updateXP(); generateChallenges(); initChart();
+});
+
+// CO2 BEREGNING & STREAK
+document.getElementById('beregn').addEventListener('click',()=>{
+  let now=Date.now();
+  const remaining=Math.ceil((60000-(now-lastCalc))/1000);
+  if(now-lastCalc<60000){alert(`Du kan kun beregne CO₂ hvert minut. Vent ${remaining} sekunder.`); return;}
+  lastCalc=now;
+
+  const km=parseFloat(document.getElementById('km').value)||0;
+  const bil=document.getElementById('biltype').value;
+  const el=parseFloat(document.getElementById('elforbrug').value)||0;
+  const varme=parseFloat(document.getElementById('varmeforbrug').value)||0;
+  const koed=parseFloat(document.getElementById('koed').value)||0;
+  const veg=parseFloat(document.getElementById('veg').value)||0;
+  const fly=parseFloat(document.getElementById('fly').value)||0;
+  const affald=parseFloat(document.getElementById('affald').value)||0;
+  const plastik=parseFloat(document.getElementById('plastik').value)||0;
+  const madspild=parseFloat(document.getElementById('madspild').value)||0;
+  const toej=parseFloat(document.getElementById('toej').value)||0;
+
+  let co2Bil=0; if(bil==='benzin') co2Bil=km*0.192; else if(bil==='diesel') co2Bil=km*0.171;
+  else if(bil==='elbil') co2Bil=km*0.04; else if(bil==='bus') co2Bil=km*0.05; else if(bil==='tog') co2Bil=km*0.03;
+
+  let co2El=el*0.233; let co2Varme=varme*0.185; let co2Koed=koed*52*1.5;
+  let co2Veg=veg*52*0.5; let co2Fly=fly*250; let co2Affald=affald*0.05;
+  let co2Plastik=plastik*0.1; let co2Madspild=madspild*5; let co2Toej=toej*10;
+  const total=co2Bil+co2El+co2Varme+co2Koed+co2Veg+co2Fly+co2Affald+co2Plastik+co2Madspild+co2Toej;
+
+  chartData.datasets[0].data=[co2Bil,co2El,co2Varme,co2Koed,co2Veg,co2Fly,co2Affald,co2Plastik,co2Madspild,co2Toej];
+  chart.update();
+
+  let gennemsnit=4500;
+  let pct=((total-gennemsnit)/gennemsnit*100).toFixed(1);
+  document.getElementById('resultat').innerText=`Din samlede CO₂-udledning: ${total.toFixed(0)} kg CO₂/år\n`+
+  ((total>gennemsnit)?`⚠️ Over gennemsnittet med ${pct}%`:`✅ Under gennemsnittet med ${Math.abs(pct)}%`);
+
+  let tips=[];
+  if(bil!=='elbil'&&bil!=='ingen'&&km>10000) tips.push("Overvej elbil eller kør mindre.");
+  if(el>4000) tips.push("Spar på strømmen – sluk lys og elektronik.");
+  if(varme>15000) tips.push("Forbedr isolering eller skift til fjernvarme.");
+  if(fly>2) tips.push("Reducer flyrejser – tag toget.");
+  if(koed>3) tips.push("Spis mindre kød.");
+  if(plastik>2) tips.push("Reducer plastikforbrug.");
+  if(affald>10) tips.push("Reducer affaldsmængde.");
+  if(madspild>2) tips.push("Reducer madspild.");
+  if(toej>5) tips.push("Reducer tøjforbrug.");
+  document.getElementById('topTips').innerText=tips.length? "💡 Tips:\n- "+tips.join("\n- "):"Godt klaret! Din udledning er lav 🌍💚";
+
+  // XP + badges + streak
+  let u = users[currentUser];
+  let xpGain = Math.max(10, Math.round((5000-total)/50));
+
+  // Streak bonus: hvis streak>0, +5 XP per dag
+  if(u.streak>0) xpGain += u.streak*5;
+
+  // Streak logik
+  let nowTime = Date.now();
+  if(!u.streakTime) u.streakTime=nowTime;
+  if(nowTime-u.streakTime>24*60*60*1000) u.streak=0;
+  let completedChallenges = userChallenges.filter(c=>c.done).length;
+  if(completedChallenges>=2){ u.streak++; u.streakTime=nowTime;}
+
+  u.xp+=xpGain;
+  if(total<4000&&!u.badges.includes("🌟 Grøn Bruger")) u.badges.push("🌟 Grøn Bruger");
+  updateXP();
+});
+
+// XP & badges
+function updateXP(){
+  let user=users[currentUser];
+  let pct=(user.xp/user.nextXP)*100; if(pct>100)pct=100;
+  document.getElementById('xpBar').style.width=pct+'%';
+  document.getElementById('xpText').innerText=`XP: ${Math.floor(user.xp)} / ${user.nextXP}`;
+  document.getElementById('streakText').innerText=`Streak: ${user.streak} dage 🔥`;
+
+  const badgeContainer=document.getElementById('badges');
+  badgeContainer.innerHTML='';
+  user.badges.forEach(b=>{let d=document.createElement('div'); d.className='badge'; d.innerText=b; badgeContainer.appendChild(d);});
+
+  if(user.xp>=user.nextXP){
+    user.level++; user.xp=0; user.nextXP*=2;
+    document.getElementById('levelUp').style.display='block';
+    spawnConfetti(100);
+    setTimeout(()=>{document.getElementById('levelUp').style.display='none';},3000);
+  }
+}
+
+// CHALLENGES
+function generateChallenges(){
+  let shuffled = allChallenges.sort(()=>0.5-Math.random());
+  userChallenges = shuffled.slice(0,3).map(c=>({...c,done:false}));
+  renderChallenges();
+}
+function renderChallenges(){
+  const cl = document.getElementById('challengeList'); cl.innerHTML='';
+  userChallenges.forEach((c,i)=>{
+    const div = document.createElement('div');
+    div.className='challenge';
+    div.innerHTML = `<span>${c.text}</span> <button ${c.done?'disabled':''} onclick="completeChallenge(${i})">${c.done?'✅':'Fuldfør'}</button>`;
+    cl.appendChild(div);
+  });
+}
+function completeChallenge(i){
+  if(!currentUser) return;
+  userChallenges[i].done = true;
+  users[currentUser].xp += userChallenges[i].xp;
+  updateXP();
+  renderChallenges();
+}
+
+// ROTER CHALLENGES + TIMER
+setInterval(()=>{
+  if(!currentUser) return;
+  let now = Date.now();
+  let remaining = nextRotation - now;
+  if(remaining <=0){
+    generateChallenges();
+    nextRotation = Date.now() + rotateInterval;
+    remaining = rotateInterval;
+  }
+  let min = Math.floor(remaining/60000);
+  let sec = Math.floor((remaining%60000)/1000);
+  document.getElementById('challengeTimer').innerText = `– Roterer om ${min}m ${sec}s`;
+},1000);
+
+// FAKTA POPUP
+let facts=["🌱 Reducer bilkørsel mindsker CO₂.","🥩 Mindre kød = mindre miljøpåvirkning.","🚲 Brug cykel eller gå i stedet for bil.","♻️ Genbrug og reducer plastik.","🔥 Spar på varme og el i hjemmet.","💧 Mindre vand = mindre energi.","👕 Køb mindre nyt tøj – genbrug!","🛒 Køb lokalt for mindre transport."];
+setInterval(()=>{ showFact(facts[Math.floor(Math.random()*facts.length)]); },60000);
+function showFact(text){document.getElementById('factText').innerText=text; document.getElementById('factPopup').style.display='block';}
+function closeFact(){document.getElementById('factPopup').style.display='none';}
+
+// CONFETTI
+function spawnConfetti(n){
+  for(let i=0;i<n;i++){
+    let c=document.createElement('div');
+    c.className='confetti-piece';
+    c.style.background=`hsl(${Math.random()*360},70%,50%)`;
+    c.style.left=Math.random()*window.innerWidth+'px';
+    c.style.top='-10px';
+    c.style.width=Math.random()*8+4+'px';
+    c.style.height=c.style.width;
+    document.body.appendChild(c);
+    setTimeout(()=>{c.remove();},3000);
+  }
+}
+
+// CHART.JS
+function initChart(){
+  const ctx = document.getElementById('co2Chart').getContext('2d');
+  chart = new Chart(ctx, { type:'bar', data:chartData, options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } });
+}
+// --- END JAVASCRIPT ---
+</script>
+</main>
+</body>
+</html>
